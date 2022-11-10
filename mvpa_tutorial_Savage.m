@@ -93,8 +93,12 @@ model(1).desc = {'DiscrimType', 'linear', 'OptimizeHyperparameters', 'auto'};
 % like PCA before classification
 
 model(1).class_factor = 1; % which factor are you trying to classify?
+<<<<<<< Updated upstream
 % model(1).add_pred = {'session'};
 model(1).add_pred = {'session','runs'};
+=======
+model(1).add_pred = {'session'};
+>>>>>>> Stashed changes
 % this adds additional predictors to the BOLD data. For example a non-classification factor, can also specify session and run as additional predictors
 % model(1).add_pred ={}; , but you don't have to
 
@@ -126,6 +130,7 @@ for r = 1:length(roi)
             [perf, Mdl, Mdl_CV] = mvpa.classify(model(m),  roi(r).predictors, ...
                 factor(model(m).class_factor).classlabels);
         end
+        figure(10)
         h(m) = errorbar(r, perf.mean, perf.std, model(m).sym);
         set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
     end
