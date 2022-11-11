@@ -114,10 +114,10 @@ model(1).add_pred ={};  %but you don't have to
 
 %%%%%%%% Specifies cross validation style.
 % Examples of sensible cross validation styles:
-% {{'Kfold',  5}, {'Holdout', .1}, {'Leaveout', 'on'},
-
-model(1).CVstyle = {'Kfold', 10};
-model(1).color = 'r'; model(1).sym = 's';
+% % {{'Kfold',  5}, {'Holdout', .1}, {'Leaveout', 'on'},
+% 
+% model(1).CVstyle = {'Kfold', 10};
+% model(1).color = 'r'; model(1).sym = 's';
 
 %%%%%% If you want to Generalize over specific factors (e.g. use one factor to select a training set, 
 % and the other to select a test set the terminology is a little different:
@@ -128,17 +128,8 @@ model(1).color = 'r'; model(1).sym = 's';
 % model(1).CVstyle= {'Generalize', 2, 'Vis', 'Aud'}; %Train Visual, test Auditory 
 
 
-
-%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%
-%%Thse options are used for some testing I was doing, but aren't valid used alone, as
-%%they don't natively exclude training data from the test sets, and so
-%%show strong classification
-
 % model(1).CVstyle= {'Generalize', 2, 'Aud', 'Aud'};%Train Auditory, test Auditory
-% model(1).CVstyle= {'Generalize', 2, 'Vis','Vis'}; %Train Visual, test visual
-%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%
+model(1).CVstyle= {'Generalize', 2, 'Vis','Vis'}; %Train Visual, test visual
 
 
 model(1).color = 'r'; model(1).sym = 's';
