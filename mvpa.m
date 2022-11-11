@@ -17,7 +17,7 @@ classdef mvpa
 
         end
         function data_xff  = load_data(file)
-           % loads BOLD data, saves in xff format, can be vmp or glm
+            % loads BOLD data, saves in xff format, can be vmp or glm
             disp(['loading ', file.name]);
             clear data_xff;
             data_xff = xff(fullfile(file.folder, file.name)); % loading data into MATLAB
@@ -44,9 +44,9 @@ classdef mvpa
 
         function factor = collate_factor_labels(factor, conds, session, run)
             % collate factors across sessions and runs
-            
+
             if length(factor)>3 % if we have more than one factor, there's a combination factor
-                nf = 3; 
+                nf = 3;
 
             else % if only one explicitly defined factor, we just have 3 factors, the factor, session and run
                 nf = 2;
@@ -56,7 +56,7 @@ classdef mvpa
                 factor(f).classlabels = cat(1, factor(f).classlabels, factor(f).labels(conds(:,factor(f).col))');
             end
 
-            if length(factor)>3 
+            if length(factor)>3
                 % collates the factor that is a combination of all other
                 % factors
                 for c = 1:size(conds,1)
@@ -67,7 +67,7 @@ classdef mvpa
                 end
                 factor(end-2).classlabels = cat(2, factor(end-2).classlabels, str);
             end
-            
+
             % make session and run factors
             factor(end-1).classlabels = cat(1, factor(end-1).classlabels, session.*ones(size(conds,1), 1));
             factor(end).classlabels = cat(1, factor(end).classlabels, run.*ones(size(conds,1), 1));
@@ -82,7 +82,7 @@ classdef mvpa
                 data_roi = mvpa.GLMinVOI(data_xff, roi_xff);% get the beta weights by roi
             end
         end
-        
+
         function [predictors] = generate_predictors(model, factor, roi)
             % so decide what besides the voxel values will be predictors
             predictors = num2cell(roi.predictors);
@@ -100,12 +100,12 @@ classdef mvpa
             % any factors one wants to exclude?
             idx = ones(size(predictors, 1), 1);
             for p = 1:2:length(model.Exclude)
-               tmp = ~strcmp(model.Exclude{p, 2}, factor(model.Exclude{p, 1}).classlabels);
-               idx = idx.*tmp;
+                tmp = ~strcmp(model.Exclude{p, 2}, factor(model.Exclude{p, 1}).classlabels);
+                idx = idx.*tmp;
             end
             predictors = predictors(find(idx), :);
         end
-            % from anatomies to voi 
+        % from anatomies to voi
         function [b] = VMPinVOI(vmp, voi, voiNum)
             % [b] = GLMinVOI(vmp, voi ,voiNum)
             %
@@ -312,10 +312,20 @@ classdef mvpa
         end
 
         function [perf, Mdl, Mdl_CV] = classify(model,predictors,classlabels, genlabels)
-           
+
             if ~sum(strcmp(model.CVstyle, 'Generalize'))
                 train_idx = 1:length(classlabels);
                 test_idx = train_idx;
+
+            elseif sum(strcmp(model.CVstyle, 'Generalize')) && strcmp(model.CVstyle{3},model.CVstyle{3})
+                train_idx = strcmp(genlabels, model.CVstyle{3});
+                test_idx = strcmp(genlabels, model.CVstyle{4});
+                disp('Train and test sets are the same; defaulting to kFold, Descrimtype')
+                
+                model(1).CVstyle = {'Kfold', 10};
+                model(1).desc{1}='DiscrimType'; 
+
+
             else
                 train_idx = strcmp(genlabels, model.CVstyle{3});
                 test_idx = strcmp(genlabels, model.CVstyle{4});
@@ -334,6 +344,7 @@ classdef mvpa
                 perf.ind = 1-kfoldLoss(Mdl_CV,'Mode', 'individual');
                 perf.mean = mean(perf.ind);
                 perf.std = std(perf.ind )/sqrt(length(perf.ind));
+
             else
                 Mdl_CV = NaN;
                 perf.yfit = Mdl.predict(predictors(test_idx, :));
@@ -343,7 +354,7 @@ classdef mvpa
         end
 
 
- 
+
 
     end
 end
