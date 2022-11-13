@@ -52,7 +52,7 @@ roi_xff = mvpa.load_roi(fullfile(paths.main, paths.subject,paths.roi, roiFileNam
 if iscell(roi_xff); roi_xff=roi_xff{1}; disp(['Coerced roi_xff from cell to xff']); end
 
 %% add the model
-model(1).desc = {'DiscrimType', 'linear'};
+model(1).desc = {'DiscrimType', 'linear',  'OptimizeHyperparameters', 'auto'};
 model(1).class_factor = 1; % which factor are you trying to classify?
 model(1).add_pred ={'Session'};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
 model(1).CVstyle = {'Kfold', 5}; % cross validation method
@@ -149,7 +149,7 @@ end
 
 %% look at classification within individual sessions
 for m = 1:2
-    model(1).CVstyle = {'Kfold', 5}; % cross validation method
+    model(1).CVstyle = {'Kfold', 3}; % cross validation method
     model(1).add_pred ={};
     for sess = 1:4
         ind = setdiff(1:4, sess);
@@ -169,8 +169,8 @@ for m = 1:2
             classlabels  =  tmp(m,sess).factor(model(m).class_factor).classlabels;
             [output(m,r, sess).perf, output(m,r, sess).Mdl, output(m,r, sess).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
             figure(m)
-            h(m) = plot(r+(sess*.1), output(m,r,sess).perf.mean,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
+            h(m) = text(r+(sess*.1), output(m,r,sess).perf.mean,num2str(sess)); hold on
+        %    set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
 
             % across modality classification
             g = mod(m, 2)+1; 
@@ -178,8 +178,8 @@ for m = 1:2
             classlabelsg  =  tmp(g, sess).factor(model(g).class_factor).classlabels; % class labels for the other modality
             [output(m, r, sess).label,score,cost] = predict(output(m,r, sess).Mdl,predictorsg);
             output(m, r, sess).perfg = sum(strcmp(output(m, r, sess).label, classlabelsg))/length(classlabelsg);
-            h(m) = plot(2+r+(sess*.1), output(m,r,sess).perfg,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
+            h(m) = text(2+r+(sess*.1), output(m,r,sess).perfg, num2str(sess)); hold on
+   %         set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
         end
     end
 end
