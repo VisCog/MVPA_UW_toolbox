@@ -55,7 +55,7 @@ if iscell(roi_xff); roi_xff=roi_xff{1}; disp(['Coerced roi_xff from cell to xff'
 model(1).desc = {'DiscrimType', 'linear'};
 model(1).class_factor = 1; % which factor are you trying to classify?
 model(1).add_pred ={};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
-model(1).CVstyle = {'Kfold', 10}; % cross validation method
+model(1).CVstyle = {'Kfold', 8}; % cross validation method
 model(1).color = 'r'; model(1).sym = 's';
 
 model(2)  = model(1); 
@@ -108,9 +108,9 @@ for m = 1:2
             set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
 
             % across modality classification
-            g = mod(m, 2)+1; 
-            predictorsg = tmp(g).roi.predictors; % predictors for the other modality
-            classlabelsg  =  tmp(g).factor(model(g).class_factor).classlabels; % class labels for the other modality
+            mg = mod(m, 2)+1; 
+            predictorsg = tmp(mg).roi.predictors; % predictors for the other modality
+            classlabelsg  =  tmp(mg).factor(model(mg).class_factor).classlabels; % class labels for the other modality
             [output(m, r).label,score,cost] = predict(output(m,r).Mdl,predictorsg);
             output(m, r).perfg = sum(strcmp(output(m, r).label, classlabelsg))/length(classlabelsg);
             h(m) = plot(2.25+r, output(m,r).perfg,model(m).sym); hold on
@@ -141,13 +141,20 @@ for m = 1:2
             figure(m)
             h(m) = plot(r+(sess*.1), output(m,r,sess).perf.mean,model(m).sym); hold on
             set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
-
+        end
+    end
+end
+for m = 1:2
+    for sess  = 1:5
+        for r = 1:length(roi)
             % across modality classification
-            g = mod(m, 2)+1; 
-            predictorsg = tmp(g, sess).roi.predictors; % predictors for the other modality
-            classlabelsg  =  tmp(g, sess).factor(model(g).class_factor).classlabels; % class labels for the other modality
+            mg = mod(m, 2)+1; %mg = m; 
+            sessg = sess; %mod(sess+1, sess)+1; used as a sanity check
+            predictorsg = tmp(mg, sessg).roi.predictors; % predictors for the other modality
+            classlabelsg  =  tmp(mg, sessg).factor(model(mg).class_factor).classlabels; % class labels for the other modality
             [output(m, r, sess).label,score,cost] = predict(output(m,r, sess).Mdl,predictorsg);
             output(m, r, sess).perfg = sum(strcmp(output(m, r, sess).label, classlabelsg))/length(classlabelsg);
+              figure(m)
             h(m) = plot(2+r+(sess*.1), output(m,r,sess).perfg,model(m).sym); hold on
             set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
         end
