@@ -138,7 +138,7 @@ for m = 1:2
     set(gca, 'XLim', [0 6])
     set(gca, 'YLim', [ .4 .7])
     set(gca, 'XTick', 1.2:4.2)
-    set(gca, 'XTickLabel', {'within L', 'within R', 'across L', 'across R'})
+    set(gca, 'XTickLabel', {'within L', 'within R', 'crossModal L', 'crossmodal R'})
     if m==1
         title('Auditory Training')
     else
