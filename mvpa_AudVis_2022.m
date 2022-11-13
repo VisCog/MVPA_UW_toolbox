@@ -19,7 +19,6 @@ roi(1).name = {'hMT_L'};
 roi(2).name = {'hMT_R'};
 for run = 1:length(roi); roi(run).predictors = []; end % initialize the roi struct to collate later
 
-
 modelName=['*24-class.glm']; %name of glms produced 
 condFileName=['sub-SR-G-kk*.mat']; % condition files containing experimental info 
 
@@ -59,7 +58,6 @@ for sess = 1:length(paths.session); disp(sess) % for each session
             ' does not match the number of experimental files', num2str(length(data_filelist))]);
     end
 
-
     for run = 1:length(data_filelist) % for each vmp/glm file
 
         % deal with factors
@@ -75,8 +73,13 @@ for sess = 1:length(paths.session); disp(sess) % for each session
 end
 
 
+model(1).desc = {'DiscrimType', 'linear'};
+model(1).class_factor = 1; % which factor are you trying to classify?
+model(1).add_pred ={}; , %but you don't have to
+model(1).CVstyle = {'Kfold', 10};
+model(1).color = 'r'; model(1).sym = 's';
 
-
+return
 %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%
 

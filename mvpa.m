@@ -39,23 +39,16 @@ classdef mvpa
                 end
             end
         end
-
-
-
-        function factor = collate_factor_labels(factor, conds, session, run)
-            % collate factors across sessions and runs
-            
+       function factor = collate_factor_labels(factor, conds, session, run)
+            % collate factors across sessions and runs        
             if length(factor)>3 % if we have more than one factor, there's a combination factor
                 nf = 3; 
-
             else % if only one explicitly defined factor, we just have 3 factors, the factor, session and run
                 nf = 2;
             end
-
             for f = 1:(length(factor)-nf)
                 factor(f).classlabels = cat(1, factor(f).classlabels, factor(f).labels(conds(:,factor(f).col))');
             end
-
             if length(factor)>3 
                 % collates the factor that is a combination of all other
                 % factors
@@ -67,7 +60,6 @@ classdef mvpa
                 end
                 factor(end-2).classlabels = cat(2, factor(end-2).classlabels, str);
             end
-            
             % make session and run factors
             factor(end-1).classlabels = cat(1, factor(end-1).classlabels, session.*ones(size(conds,1), 1));
             factor(end).classlabels = cat(1, factor(end).classlabels, run.*ones(size(conds,1), 1));
@@ -82,28 +74,38 @@ classdef mvpa
                 data_roi = mvpa.GLMinVOI(data_xff, roi_xff);% get the beta weights by roi
             end
         end
-        
-        function [predictors] = generate_predictors(model, factor, roi)
+
+        function roi = add_predictors(model, factor, roi)
             % so decide what besides the voxel values will be predictors
-            predictors = num2cell(roi.predictors);
-            for p = 1:length(model.add_pred)
-                if isa(model.add_pred{p}, 'double')
-                    predictors = cat(2, predictors, factor(model.add_pred{p}).classlabels);
-                elseif strcmp(model.add_pred{p}, 'session')
-                    predictors = cat(2, predictors, num2cell(factor(end-1).classlabels));
-                elseif strcmp(model.add_pred{p}, 'run')
-                    predictors = cat(2, predictors, num2cell(factor(end).classlabels));
+            for r = 1:length(roi)
+                tmp =roi(r).predictors;
+                for p = 1:length(model.add_pred)
+                    if strcmp(model.add_pred{p}, 'Session')
+                        tmp = cat(2, tmp, factor(end-1).classlabels);
+                    elseif strcmp(model.add_pred{p}, 'Run')
+                        tmp = cat(2, tmp,factor(end).classlabels);
+                    end
                 end
+                roi(r).predictors = tmp;
             end
         end
-        function predictors = exclude_factors(predictors, model, factor)
+        function [roi, factor] = exclude_predictors(roi, model, factor)
             % any factors one wants to exclude?
-            idx = ones(size(predictors, 1), 1);
-            for p = 1:2:length(model.Exclude)
+            for r = 1:length(roi)
+            idx = ones(size(roi(r).predictors, 1), 1);
+            for p = 1:size(model.Exclude, 1) 
+                if isstr(model.Exclude{p, 2})
                tmp = ~strcmp(model.Exclude{p, 2}, factor(model.Exclude{p, 1}).classlabels);
+                elseif isnumeric(model.Exclude{p, 2})
+                    tmp  = ~(model.Exclude{p, 2}== factor(model.Exclude{p, 1}).classlabels);
+                end
                idx = idx.*tmp;
             end
-            predictors = predictors(find(idx), :);
+            roi(r).predictors = roi(r).predictors(find(idx), :);
+            end
+            for f = 1:length(factor)
+             factor(f).classlabels = factor(f).classlabels(find(idx));
+            end
         end
             % from anatomies to voi 
         function [b] = VMPinVOI(vmp, voi, voiNum)
@@ -310,7 +312,6 @@ classdef mvpa
                 b(i).beta = glmData(b(i).id,:);
             end
         end
-
         function [perf, Mdl, Mdl_CV] = classify(model,predictors,classlabels, genlabels)
            
             if ~sum(strcmp(model.CVstyle, 'Generalize'))
@@ -321,13 +322,11 @@ classdef mvpa
                 test_idx = strcmp(genlabels, model.CVstyle{4});
             end
 
-
             if strcmp(model.desc{1}, 'DiscrimType')
                 Mdl = fitcdiscr(predictors(train_idx, :), classlabels(train_idx), model.desc{:});
             elseif strcmp(model.desc{1},'SVM')
                 Mdl = fitcecoc(predictors(train_idx, :), classlabels(train_idx), model.desc{:});
             end
-
 
             if  ~strcmp(model.CVstyle, 'Generalize')
                 Mdl_CV = crossval(Mdl, model.CVstyle{:});
@@ -341,10 +340,6 @@ classdef mvpa
                 perf.std = 0;
             end
         end
-
-
- 
-
     end
 end
 
