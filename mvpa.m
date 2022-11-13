@@ -14,10 +14,9 @@ classdef mvpa
             % xff format
             voiFile = fullfile(location);
             roi = xff(voiFile); % loads in the roi file
-
         end
         function data_xff  = load_data(file)
-           % loads BOLD data, saves in xff format, can be vmp or glm
+            % loads BOLD data, saves in xff format, can be vmp or glm
             disp(['loading ', file.name]);
             clear data_xff;
             data_xff = xff(fullfile(file.folder, file.name)); % loading data into MATLAB
@@ -39,6 +38,7 @@ classdef mvpa
                 end
             end
         end
+
        function factor = collate_factor_labels(factor, conds, session, run)
             % collate factors across sessions and runs        
             if length(factor)>3 % if we have more than one factor, there's a combination factor
@@ -74,7 +74,6 @@ classdef mvpa
                 data_roi = mvpa.GLMinVOI(data_xff, roi_xff);% get the beta weights by roi
             end
         end
-
         function roi = add_predictors(model, factor, roi)
             % so decide what besides the voxel values will be predictors
             for r = 1:length(roi)
@@ -107,7 +106,7 @@ classdef mvpa
              factor(f).classlabels = factor(f).classlabels(find(idx));
             end
         end
-            % from anatomies to voi 
+        % from anatomies to voi
         function [b] = VMPinVOI(vmp, voi, voiNum)
             % [b] = GLMinVOI(vmp, voi ,voiNum)
             %
@@ -313,10 +312,20 @@ classdef mvpa
             end
         end
         function [perf, Mdl, Mdl_CV] = classify(model,predictors,classlabels, genlabels)
-           
+
             if ~sum(strcmp(model.CVstyle, 'Generalize'))
                 train_idx = 1:length(classlabels);
                 test_idx = train_idx;
+
+            elseif sum(strcmp(model.CVstyle, 'Generalize')) && strcmp(model.CVstyle{3},model.CVstyle{3})
+                train_idx = strcmp(genlabels, model.CVstyle{3});
+                test_idx = strcmp(genlabels, model.CVstyle{4});
+                disp('Train and test sets are the same; defaulting to kFold, Descrimtype')
+                
+                model(1).CVstyle = {'Kfold', 10};
+                model(1).desc{1}='DiscrimType'; 
+
+
             else
                 train_idx = strcmp(genlabels, model.CVstyle{3});
                 test_idx = strcmp(genlabels, model.CVstyle{4});
@@ -333,6 +342,7 @@ classdef mvpa
                 perf.ind = 1-kfoldLoss(Mdl_CV,'Mode', 'individual');
                 perf.mean = mean(perf.ind);
                 perf.std = std(perf.ind )/sqrt(length(perf.ind));
+
             else
                 Mdl_CV = NaN;
                 perf.yfit = Mdl.predict(predictors(test_idx, :));
