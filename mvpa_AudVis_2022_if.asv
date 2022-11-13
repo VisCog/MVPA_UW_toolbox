@@ -54,8 +54,8 @@ if iscell(roi_xff); roi_xff=roi_xff{1}; disp(['Coerced roi_xff from cell to xff'
 %% add the model
 model(1).desc = {'DiscrimType', 'linear'};
 model(1).class_factor = 1; % which factor are you trying to classify?
-model(1).add_pred ={};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
-model(1).CVstyle = {'Kfold', 10}; % cross validation method
+model(1).add_pred ={'Session'};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
+model(1).CVstyle = {'Kfold', 5}; % cross validation method
 model(1).color = 'r'; model(1).sym = 's';
 
 model(2)  = model(1); 
@@ -88,61 +88,76 @@ end
 
 roi = mvpa.add_predictors(model(m), factor, roi);         % option to add session and run as predictors
 
+figure(1)
+for r = 1:2
+subplot(1,2,r)
+ imagesc(roi(r).predictors)
+ roi(r).whitened = mvpa(whoi)
+colormap(gray); xlabel('voxels'); ylabel('events')
+end
 %% look at classification across all sessions
 for m = 1:2
-        if m ==1
-            model(m).Exclude = {2, 'Vis' }; % list of conditions to exclude##
-        else
-            model(m).Exclude = {2, 'Aud'}; % list of conditions to exclude##
-        end
-        [ tmp(m).roi, tmp(m).factor] = mvpa.exclude_predictors(roi, model(m), factor);
+    if m ==1
+        model(m).Exclude = {2, 'Vis' }; % list of conditions to exclude##
+    else
+        model(m).Exclude = {2, 'Aud'}; % list of conditions to exclude##
+    end
+    [ tmp(m).roi, tmp(m).factor] = mvpa.exclude_predictors(roi, model(m), factor);
 end
 for m = 1:2
-        for r = 1:length(roi)
-            % within modality classification
-            predictors = tmp(m).roi.predictors;
-            classlabels  =  tmp(m).factor(model(m).class_factor).classlabels;
-            [output(m,r).perf, output(m,r).Mdl, output(m,r).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
-            figure(m)
-            h(m) = plot(r+.25, output(m,r).perf.mean,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
+    for r = 1:length(roi)
+        % within modality classification
+        predictors = tmp(m).roi.predictors;
+        classlabels  =  tmp(m).factor(model(m).class_factor).classlabels;
+        [output(m,r).perf, output(m,r).Mdl, output(m,r).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
+        figure(m)
+        e(m) =errorbar(r+.25, output(m,r).perf.mean,output(m,r).perf.std); hold on
+        set(e(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color);
+        h(m) = plot(r+.25, output(m,r).perf.mean,model(m).sym); hold on
+        set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
 
-            % across modality classification
-            g = mod(m, 2)+1; 
-            predictorsg = tmp(g).roi.predictors; % predictors for the other modality
-            classlabelsg  =  tmp(g).factor(model(g).class_factor).classlabels; % class labels for the other modality
-            [output(m, r).label,score,cost] = predict(output(m,r).Mdl,predictorsg);
-            output(m, r).perfg = sum(strcmp(output(m, r).label, classlabelsg))/length(classlabelsg);
-            h(m) = plot(2.25+r, output(m,r).perfg,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
-        end
+        % across modality classification
+        mg = mod(m, 2)+1;
+        predictorsg = tmp(mg).roi.predictors; % predictors for the other modality
+        classlabelsg  =  tmp(mg).factor(model(mg).class_factor).classlabels; % class labels for the other modality
+        [output(m, r).label,score,cost] = predict(output(m,r).Mdl,predictorsg);
+        output(m, r).perfg = sum(strcmp(output(m, r).label, classlabelsg))/length(classlabelsg);
+        h(m) = plot(2.25+r, output(m,r).perfg,model(m).sym); hold on
+        set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
+    end
 end
+
 for m = 1:2
     figure(m)
-    if m==1
-        title('')
     plot([0 4], [.5 .5], 'k--')
     set(gca, 'XLim', [0 6])
-    set(gca, 'YLim', [ .4 1])
+    set(gca, 'YLim', [ .4 .7])
     set(gca, 'XTick', 1.2:4.2)
-    set(gca, 'XTickLabel', {'within Mod lMT', 'within Mod rMT', 'across Mod lMT', 'across Mod rMT'})
+    set(gca, 'XTickLabel', {'within L', 'within R', 'across L', 'across R'})
+    if m==1
+        title('Auditory Training')
+    else
+        title('Visual Training')
+    end
 end
-
+return
 
 %% look at classification within individual sessions
 for m = 1:2
-    for sess = 1:5
-        ind = setdiff(1:5, sess);
+    model(1).CVstyle = {'Kfold', 5}; % cross validation method
+    model(1).add_pred ={};
+    for sess = 1:4
+        ind = setdiff(1:4, sess);
         if m ==1
-            model(m).Exclude = {2, 'Vis'; 5, num2str(ind(1)); 5, num2str(ind(2));  5, num2str(ind(3)); 5, num2str(ind(4)) }; % list of conditions to exclude##
+            model(m).Exclude = {2, 'Vis'; 5, ind(1); 5, ind(2);  5, ind(3)}; % list of conditions to exclude
         else
-            model(m).Exclude = {2, 'Aud'; 5, num2str(ind(1)); 5, num2str(ind(2));  5, num2str(ind(3)) ; 5, num2str(ind(4))}; % list of conditions to exclude##
+            model(m).Exclude = {2, 'Aud'; 5,ind(1); 5, ind(2);  5,ind(3)}; % list of conditions to exclude##
         end
         [ tmp(m, sess).roi, tmp(m, sess).factor] = mvpa.exclude_predictors(roi, model(m), factor);
     end
 end
 for m = 1:2
-    for sess = 1:5
+    for sess = 1:4
         for r = 1:length(roi)
             % within modality classification
             predictors = tmp(m, sess).roi.predictors;
@@ -163,12 +178,5 @@ for m = 1:2
         end
     end
 end
-for m = 1:2
-    figure(m)
-    plot([0 4], [.5 .5], 'k--')
-    set(gca, 'XLim', [0 6])
-    set(gca, 'YLim', [ .4 1])
-    set(gca, 'XTick', 1.2:4.2)
-    set(gca, 'XTickLabel', {'within L', 'within R', 'across L', 'across R'})
-end
+
 

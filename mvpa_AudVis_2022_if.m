@@ -54,8 +54,8 @@ if iscell(roi_xff); roi_xff=roi_xff{1}; disp(['Coerced roi_xff from cell to xff'
 %% add the model
 model(1).desc = {'DiscrimType', 'linear'};
 model(1).class_factor = 1; % which factor are you trying to classify?
-model(1).add_pred ={};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
-model(1).CVstyle = {'Kfold', 8}; % cross validation method
+model(1).add_pred ={'Session'};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
+model(1).CVstyle = {'Kfold', 5}; % cross validation method
 model(1).color = 'r'; model(1).sym = 's';
 
 model(2)  = model(1); 
@@ -88,83 +88,55 @@ end
 
 roi = mvpa.add_predictors(model(m), factor, roi);         % option to add session and run as predictors
 
+figure(10)
+for r = 1:2
+subplot(2,2,r)
+ imagesc(roi(r).predictors)
+ roi(r).whitened = mvpa.whiten(roi(r).predictors, .0001);
+ subplot(2,2,r+2)
+ imagesc(roi(r).whitened)
+colormap(gray); xlabel('voxels'); ylabel('events')
+roi(r).predictors = roi(r).whitened;
+end
+
+
 %% look at classification across all sessions
 for m = 1:2
-        if m ==1
-            model(m).Exclude = {2, 'Vis' }; % list of conditions to exclude##
-        else
-            model(m).Exclude = {2, 'Aud'}; % list of conditions to exclude##
-        end
-        [ tmp(m).roi, tmp(m).factor] = mvpa.exclude_predictors(roi, model(m), factor);
+    if m ==1
+        model(m).Exclude = {2, 'Vis' }; % list of conditions to exclude##
+    else
+        model(m).Exclude = {2, 'Aud'}; % list of conditions to exclude##
+    end
+    [ tmp(m).roi, tmp(m).factor] = mvpa.exclude_predictors(roi, model(m), factor);
 end
 for m = 1:2
-        for r = 1:length(roi)
-            % within modality classification
-            predictors = tmp(m).roi.predictors;
-            classlabels  =  tmp(m).factor(model(m).class_factor).classlabels;
-            [output(m,r).perf, output(m,r).Mdl, output(m,r).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
-            figure(m)
-            h(m) = plot(r+.25, output(m,r).perf.mean,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
+    for r = 1:length(roi)
+        % within modality classification
+        predictors = tmp(m).roi.predictors;
+        classlabels  =  tmp(m).factor(model(m).class_factor).classlabels;
+        [output(m,r).perf, output(m,r).Mdl, output(m,r).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
+        figure(m)
+        e(m) =errorbar(r+.25, output(m,r).perf.mean,output(m,r).perf.std); hold on
+        set(e(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color);
+        h(m) = plot(r+.25, output(m,r).perf.mean,model(m).sym); hold on
+        set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
 
-            % across modality classification
-            mg = mod(m, 2)+1; 
-            predictorsg = tmp(mg).roi.predictors; % predictors for the other modality
-            classlabelsg  =  tmp(mg).factor(model(mg).class_factor).classlabels; % class labels for the other modality
-            [output(m, r).label,score,cost] = predict(output(m,r).Mdl,predictorsg);
-            output(m, r).perfg = sum(strcmp(output(m, r).label, classlabelsg))/length(classlabelsg);
-            h(m) = plot(2.25+r, output(m,r).perfg,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
-        end
-end
-
-
-%% look at classification within individual sessions
-for m = 1:2
-    for sess = 1:5
-        ind = setdiff(1:5, sess);
-        if m ==1
-            model(m).Exclude = {2, 'Vis'; 5, num2str(ind(1)); 5, num2str(ind(2));  5, num2str(ind(3)); 5, num2str(ind(4)) }; % list of conditions to exclude##
-        else
-            model(m).Exclude = {2, 'Aud'; 5, num2str(ind(1)); 5, num2str(ind(2));  5, num2str(ind(3)) ; 5, num2str(ind(4))}; % list of conditions to exclude##
-        end
-        [ tmp(m, sess).roi, tmp(m, sess).factor] = mvpa.exclude_predictors(roi, model(m), factor);
+        % across modality classification
+        mg = mod(m, 2)+1;
+        predictorsg = tmp(mg).roi.predictors; % predictors for the other modality
+        classlabelsg  =  tmp(mg).factor(model(mg).class_factor).classlabels; % class labels for the other modality
+        [output(m, r).label,score,cost] = predict(output(m,r).Mdl,predictorsg);
+        output(m, r).perfg = sum(strcmp(output(m, r).label, classlabelsg))/length(classlabelsg);
+        h(m) = plot(2.25+r, output(m,r).perfg,model(m).sym); hold on
+        set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color, 'MarkerSize', 15); hold on
     end
 end
-for m = 1:2
-    for sess = 1:5
-        for r = 1:length(roi)
-            % within modality classification
-            predictors = tmp(m, sess).roi.predictors;
-            classlabels  =  tmp(m,sess).factor(model(m).class_factor).classlabels;
-            [output(m,r, sess).perf, output(m,r, sess).Mdl, output(m,r, sess).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
-            figure(m)
-            h(m) = plot(r+(sess*.1), output(m,r,sess).perf.mean,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
-        end
-    end
-end
-for m = 1:2
-    for sess  = 1:5
-        for r = 1:length(roi)
-            % across modality classification
-            mg = mod(m, 2)+1; %mg = m; 
-            sessg = sess; %mod(sess+1, sess)+1; used as a sanity check
-            predictorsg = tmp(mg, sessg).roi.predictors; % predictors for the other modality
-            classlabelsg  =  tmp(mg, sessg).factor(model(mg).class_factor).classlabels; % class labels for the other modality
-            [output(m, r, sess).label,score,cost] = predict(output(m,r, sess).Mdl,predictorsg);
-            output(m, r, sess).perfg = sum(strcmp(output(m, r, sess).label, classlabelsg))/length(classlabelsg);
-              figure(m)
-            h(m) = plot(2+r+(sess*.1), output(m,r,sess).perfg,model(m).sym); hold on
-            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
-        end
-    end
-end
+
 for m = 1:2
     figure(m)
     plot([0 4], [.5 .5], 'k--')
     set(gca, 'XLim', [0 6])
-    set(gca, 'YLim', [ .4 1])
+    set(gca, 'YLim', [ .4 .7])
     set(gca, 'XTick', 1.2:4.2)
     set(gca, 'XTickLabel', {'within L', 'within R', 'across L', 'across R'})
     if m==1
@@ -173,4 +145,43 @@ for m = 1:2
         title('Visual Training')
     end
 end
+
+
+%% look at classification within individual sessions
+for m = 1:2
+    model(1).CVstyle = {'Kfold', 5}; % cross validation method
+    model(1).add_pred ={};
+    for sess = 1:4
+        ind = setdiff(1:4, sess);
+        if m ==1
+            model(m).Exclude = {2, 'Vis'; 5, ind(1); 5, ind(2);  5, ind(3)}; % list of conditions to exclude
+        else
+            model(m).Exclude = {2, 'Aud'; 5,ind(1); 5, ind(2);  5,ind(3)}; % list of conditions to exclude##
+        end
+        [ tmp(m, sess).roi, tmp(m, sess).factor] = mvpa.exclude_predictors(roi, model(m), factor);
+    end
+end
+for m = 1:2
+    for sess = 1:4
+        for r = 1:length(roi)
+            % within modality classification
+            predictors = tmp(m, sess).roi.predictors;
+            classlabels  =  tmp(m,sess).factor(model(m).class_factor).classlabels;
+            [output(m,r, sess).perf, output(m,r, sess).Mdl, output(m,r, sess).Mdl_CV] = mvpa.classify(model(m),double(predictors), classlabels);
+            figure(m)
+            h(m) = plot(r+(sess*.1), output(m,r,sess).perf.mean,model(m).sym); hold on
+            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
+
+            % across modality classification
+            g = mod(m, 2)+1; 
+            predictorsg = tmp(g, sess).roi.predictors; % predictors for the other modality
+            classlabelsg  =  tmp(g, sess).factor(model(g).class_factor).classlabels; % class labels for the other modality
+            [output(m, r, sess).label,score,cost] = predict(output(m,r, sess).Mdl,predictorsg);
+            output(m, r, sess).perfg = sum(strcmp(output(m, r, sess).label, classlabelsg))/length(classlabelsg);
+            h(m) = plot(2+r+(sess*.1), output(m,r,sess).perfg,model(m).sym); hold on
+            set(h(m), 'MarkerEdgeColor', model(m).color,'MarkerFaceColor', model(m).color, 'Color', model(m).color); hold on
+        end
+    end
+end
+
 
