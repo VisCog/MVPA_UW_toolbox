@@ -82,7 +82,7 @@ classdef mvpa
                     if strcmp(model.add_pred{p}, 'Session')
                         tmp = cat(2, tmp, factor(end-1).classlabels);
                     elseif strcmp(model.add_pred{p}, 'Run')
-                      tmp = cat(2, tmp, ((factor(end-1).classlabels-1).*max(factor(end).classlabels)) + factor(end).classlabels);
+                        tmp = cat(2, tmp,(( (factor(end-1).classlabels-1).*max(factor(end).classlabels) + factor(end).classlabels);
                     end
                 end
                 roi(r).predictors = tmp;
