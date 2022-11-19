@@ -54,7 +54,7 @@ if iscell(roi_xff); roi_xff=roi_xff{1}; disp(['Coerced roi_xff from cell to xff'
 model(1).desc = {'DiscrimType', 'linear',  'OptimizeHyperparameters', 'auto'};
 model(1).desc = {'DiscrimType', 'linear'};
 model(1).class_factor = 1; % which factor are you trying to classify?
-model(1).add_pred ={'Session', 'Run'};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
+model(1).add_pred ={ 'Run'};% {'Session', 'Run'};  % see if you want to include session or run as predictors, but you don't have to
 model(1).CVstyle = {'Kfold', 5}; % cross validation method
 model(1).color = 'r'; model(1).sym = 'o';
 
@@ -87,13 +87,6 @@ for sess = 1:length(paths.session)
 end
 
 roi = mvpa.add_predictors(model(m), factor, roi);         % option to add session and run as predictors
-
-%%
-% return
-% for r = 1:2
-%    O =isoutlier(roi(r).predictors,'percentiles', [2 98]);
-%     roi(r).predictors(find(O)) = NaN;
-% end
 %% create separate Aud train and Vis train datasets
 ct = 1;
 for m = 1:2
@@ -126,22 +119,15 @@ for m = 1:2
 end
 
 %% subset ROI based on  variance over events
-%thr = [500 7000];
-thr = [0 inf];
+thr = [25 7000];
+%thr = [0 inf];
 for r = 1:2
     roi(r).idx = find(roi(r).var(1,:)>thr(1) & roi(r).var(2,:)>thr(1) & roi(r).var(1,:)<thr(2) & roi(r).var(2,:)<thr(2));
     disp(['original roi size = ', num2str(length(roi(r).var))]);
     disp(['num vox saved = ', num2str(length(roi(r).idx))]);
 end
 
-%% subset events based on variance over voxels
-% thr = [100 5000];
-thr = [0 inf];
-for m = 1:2
-    class(m).idx = find(roi(1).var_events(m,:)>thr(1) & roi(2).var_events(m,:)>thr(1) & roi(1).var_events(m,:)<thr(2) & roi(2).var_events(m,:)<thr(2));
-    disp(['original num events size = ', num2str(size(tmp(m).roi(r).predictors, 1))]);
-    disp(['num events saved = ', num2str(length( class(m).idx))]);
-end
+
 
 %% do the training and testing
 
@@ -150,10 +136,10 @@ nFolds = model(1).CVstyle{ 2} ;
 for m = 1:2
     m_a = mod(m, 2)+1;
     for r = 1:length(roi)
-        predictors_w = tmp(m).roi(r).predictors(class(m).idx, roi(r).idx);
-        classlabels_w  =  tmp(m).factor(model(m).class_factor).classlabels(class(m).idx);
-        predictors_a= tmp(m_a).roi(r).predictors(class(m_a).idx, roi(r).idx); % predictors for the other modality
-        classlabels_a  =  tmp(m_a).factor(model(m_a).class_factor).classlabels(class(m_a).idx); % class labels for the other modality
+        predictors_w = tmp(m).roi(r).predictors(:, roi(r).idx);
+        classlabels_w  =  tmp(m).factor(model(m).class_factor).classlabels;
+        predictors_a= tmp(m_a).roi(r).predictors(:, roi(r).idx); % predictors for the other modality
+        classlabels_a = tmp(m_a).factor(model(m_a).class_factor).classlabels; % class labels for the other modality
         % cosmo
         dsw.samples =double(predictors_w);
         nvoxels = size(dsw.samples, 2);nsamples=size(dsw.samples,1); % should be half of 576 for this dataset
